@@ -32,7 +32,9 @@ class MultiplexerAbstractFactory extends CallbackAbstractFactoryAbstract
         $callbacks = [];
         if (isset($factoryConfig[static::KEY_CALLBACKS_SERVICES])) {
             $callbackService = $factoryConfig[static::KEY_CALLBACKS_SERVICES];
+            $statistics = [];
             foreach ($callbackService as $name => $callback) {
+                $start = microtime(true);
                 if (is_callable($callback)) {
                     $callbacks[$name] = $callback instanceof SerializedCallback ? $callback : new SerializedCallback($callback);
                 } elseif (is_array($callback) || $callback instanceof Multiplexer\CallbackObject) {
@@ -47,6 +49,17 @@ class MultiplexerAbstractFactory extends CallbackAbstractFactoryAbstract
                         $logger->alert("Callback with name $callback not found in container.");
                     }
                 }
+                $end = microtime(true);
+                $statistics[$name] = $end - $start;
+            }
+            if ($requestedName === 'min_multiplexer') {
+                $statistics = array_map(function ($item) {
+                    return sprintf('%f', $item);
+                }, $statistics);
+                $logger->debug("Multiplexer creation time", [
+                    'statistics' => $statistics,
+                    'multiplexer_name' => $requestedName
+                ]);
             }
         }
 
